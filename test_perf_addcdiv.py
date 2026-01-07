@@ -77,7 +77,11 @@ def generate_expect_addcdiv_forward_perf(input_tensor, tensor1, tensor2, value=1
 )
 @pytest.mark.parametrize("mode", ["pynative"])
 def test_addcdiv_perf_basic(mode):
-    """Performance test for mint.addcdiv with basic tensor sizes"""
+    """
+    Feature: Performance test for mint.addcdiv with basic tensor sizes
+    Description: Performance test for mint.addcdiv with basic tensor sizes
+    Expectation: MindSpore implementation should have comparable performance to PyTorch (within 1.1x).
+    """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
     
     # Test with medium-sized tensors
@@ -108,7 +112,11 @@ def test_addcdiv_perf_basic(mode):
 )
 @pytest.mark.parametrize("mode", ["pynative"])
 def test_addcdiv_perf_different_sizes(mode):
-    """Performance test for mint.addcdiv with different tensor sizes"""
+    """
+    Feature: Performance test for mint.addcdiv with different tensor sizes
+    Description: Performance test for mint.addcdiv with different tensor sizes
+    Expectation: MindSpore implementation should maintain reasonable performance across different tensor sizes.
+    """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
     
     sizes = [(100, 100), (500, 500), (1000, 1000)]
@@ -140,7 +148,11 @@ def test_addcdiv_perf_different_sizes(mode):
 )
 @pytest.mark.parametrize("mode", ["pynative"])
 def test_addcdiv_perf_with_default_value(mode):
-    """Performance test for mint.addcdiv with default value parameter"""
+    """
+    Feature: Performance test for mint.addcdiv with default value parameter
+    Description: Performance test for mint.addcdiv with default value parameter
+    Expectation: MindSpore implementation should have comparable performance to PyTorch when using default value.
+    """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
     
     # Test with default value (1.0)

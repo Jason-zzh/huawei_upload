@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ============================================================================
-""" addcdiv op test case """
+"""Test addcdiv op."""
 import pytest
 import numpy as np
 import mindspore as ms
@@ -20,12 +20,18 @@ from mindspore import mint
 import torch
 from tests.utils.mark_utils import arg_mark
 
+ms.context.set_context(mode=ms.PYNATIVE_MODE)
+
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
           card_mark='onecard', essential_mark='essential')
 @pytest.mark.parametrize('mode', ['pynative', 'KBK'])
 def test_addcdiv_basic(mode):
-    """Test basic functionality of mint.addcdiv against torch.addcdiv"""
+    """
+    Feature: Test basic functionality of mint.addcdiv against torch.addcdiv
+    Description: Test basic functionality of mint.addcdiv against torch.addcdiv
+    Expectation: The results of MindSpore and PyTorch should be consistent within tolerance.
+    """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
     
     input_tensor = torch.tensor([1.0, 2.0, 3.0])
@@ -46,7 +52,11 @@ def test_addcdiv_basic(mode):
           card_mark='onecard', essential_mark='essential')
 @pytest.mark.parametrize('mode', ['pynative', 'KBK'])
 def test_addcdiv_with_value(mode):
-    """Test mint.addcdiv with specified value parameter"""
+    """
+    Feature: Test mint.addcdiv with specified value parameter
+    Description: Test mint.addcdiv with specified value parameter
+    Expectation: The results of MindSpore and PyTorch should be consistent when using a custom value parameter.
+    """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
     
     input_tensor = torch.tensor([1.0, 2.0, 3.0])
@@ -67,7 +77,11 @@ def test_addcdiv_with_value(mode):
           card_mark='onecard', essential_mark='essential')
 @pytest.mark.parametrize('mode', ['pynative', 'KBK'])
 def test_addcdiv_different_dtypes(mode):
-    """Test mint.addcdiv with different dtypes"""
+    """
+    Feature: Test mint.addcdiv with different dtypes
+    Description: Test mint.addcdiv with different dtypes
+    Expectation: The results of MindSpore and PyTorch should be consistent across different floating point data types.
+    """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
     
     dtypes = [torch.float32, torch.float64]
@@ -91,7 +105,11 @@ def test_addcdiv_different_dtypes(mode):
           card_mark='onecard', essential_mark='essential')
 @pytest.mark.parametrize('mode', ['pynative', 'KBK'])
 def test_addcdiv_edge_cases(mode):
-    """Test mint.addcdiv with edge cases like NaN, Inf"""
+    """
+    Feature: Test mint.addcdiv with edge cases like NaN, Inf
+    Description: Test mint.addcdiv with edge cases like NaN, Inf
+    Expectation: Special values like NaN and Inf should be handled consistently between MindSpore and PyTorch.
+    """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
     
     # Test with NaN
@@ -129,7 +147,11 @@ def test_addcdiv_edge_cases(mode):
           card_mark='onecard', essential_mark='essential')
 @pytest.mark.parametrize('mode', ['pynative', 'KBK'])
 def test_addcdiv_division_by_zero(mode):
-    """Test mint.addcdiv with division by zero (should result in Inf)"""
+    """
+    Feature: Test mint.addcdiv with division by zero (should result in Inf)
+    Description: Test mint.addcdiv with division by zero (should result in Inf)
+    Expectation: Division by zero should produce Inf values consistently between MindSpore and PyTorch.
+    """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
     
     input_tensor = torch.tensor([1.0, 2.0, 3.0])
@@ -160,7 +182,11 @@ def test_addcdiv_division_by_zero(mode):
           card_mark='onecard', essential_mark='essential')
 @pytest.mark.parametrize('mode', ['pynative', 'KBK'])
 def test_addcdiv_shapes(mode):
-    """Test mint.addcdiv with different tensor shapes"""
+    """
+    Feature: Test mint.addcdiv with different tensor shapes
+    Description: Test mint.addcdiv with different tensor shapes
+    Expectation: The results of MindSpore and PyTorch should be consistent with various tensor shapes and broadcasting.
+    """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
     
     # Test with 2D tensors
