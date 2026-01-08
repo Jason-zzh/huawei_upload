@@ -170,8 +170,10 @@ def test_addbmm_with_nan_inf(mode):
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
     # Create matrices with NaN and Inf
     input_np = np.array([[1.0, np.nan], [np.inf, -1.0]], dtype=np.float32)
-    batch1_np = np.array([[[1.0, 2.0], [3.0, np.nan]], [[np.inf, 1.0], [2.0, 3.0]], [[1.0, 2.0], [3.0, 4.0]]], dtype=np.float32)
-    batch2_np = np.array([[[1.0, 2.0], [3.0, 4.0]], [[1.0, np.inf], [2.0, 3.0]], [[np.nan, 2.0], [3.0, 4.0]]], dtype=np.float32)
+    batch1_np = np.array([[[1.0, 2.0], [3.0, np.nan]], [[np.inf, 1.0], [2.0, 3.0]], [[1.0, 2.0], [3.0, 4.0]]],
+                        dtype=np.float32)
+    batch2_np = np.array([[[1.0, 2.0], [3.0, 4.0]], [[1.0, np.inf], [2.0, 3.0]], [[np.nan, 2.0], [3.0, 4.0]]],
+                        dtype=np.float32)
     input_ms = ms.Tensor(input_np)
     batch1_ms = ms.Tensor(batch1_np)
     batch2_ms = ms.Tensor(batch2_np)
