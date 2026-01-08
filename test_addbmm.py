@@ -67,7 +67,7 @@ def test_addbmm_normal(mode):
     output_ms = addbmm_forward_func(input_ms, batch1_ms, batch2_ms)
     expect = generate_expect_forward_output(input_torch, batch1_torch, batch2_torch)
 
-    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 1e-3, 1e-3)
+    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 0, 0, equal_nan=True)
 
 
 @arg_mark(
@@ -103,7 +103,7 @@ def test_addbmm_with_beta_alpha(mode):
     output_ms = addbmm_forward_func(input_ms, batch1_ms, batch2_ms, beta=beta, alpha=alpha)
     expect = generate_expect_forward_output(input_torch, batch1_torch, batch2_torch, beta=beta, alpha=alpha)
 
-    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 1e-3, 1e-3)
+    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 0, 0, equal_nan=True)
 
 
 @arg_mark(
@@ -137,7 +137,7 @@ def test_addbmm_dtype_float64(mode):
     output_ms = addbmm_forward_func(input_ms, batch1_ms, batch2_ms)
     expect = generate_expect_forward_output(input_torch, batch1_torch, batch2_torch)
 
-    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 1e-5, 1e-5)
+    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 0, 0, equal_nan=True)
 
 
 @arg_mark(
@@ -171,7 +171,7 @@ def test_addbmm_dtype_int32(mode):
     output_ms = addbmm_forward_func(input_ms, batch1_ms, batch2_ms)
     expect = generate_expect_forward_output(input_torch, batch1_torch, batch2_torch)
 
-    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 1e-3, 1e-3)
+    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 0, 0, equal_nan=True)
 
 
 @arg_mark(
@@ -206,7 +206,7 @@ def test_addbmm_with_nan_inf(mode):
     output_ms = addbmm_forward_func(input_ms, batch1_ms, batch2_ms)
     expect = generate_expect_forward_output(input_torch, batch1_torch, batch2_torch)
 
-    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 1e-3, 1e-3, equal_nan=True)
+    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 0, 0, equal_nan=True)
 
 
 @arg_mark(
@@ -241,7 +241,7 @@ def test_addbmm_default_params(mode):
     output_ms = mint.addbmm(input_ms, batch1_ms, batch2_ms)
     expect = torch.addbmm(input_torch, batch1_torch, batch2_torch)
 
-    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 1e-3, 1e-3)
+    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 0, 0, equal_nan=True)
 
 
 @arg_mark(
@@ -292,4 +292,172 @@ def test_addbmm_vmap(mode):
         expected_outputs.append(expected_out.detach().numpy())
     expected_result = np.stack(expected_outputs)
 
-    allclose_nparray(output_ms.asnumpy(), expected_result, 1e-3, 1e-3)
+    allclose_nparray(output_ms.asnumpy(), expected_result, 0, 0, equal_nan=True)
+
+
+@arg_mark(
+    plat_marks=["cpu_linux"],
+    level_mark="level0",
+    card_mark="onecard",
+    essential_mark="essential",
+)
+@pytest.mark.parametrize("mode", ["pynative"])
+def test_addbmm_empty_tensors(mode):
+    """
+    Feature: test addbmm with empty tensors.
+    Description: test addbmm op with empty tensors.
+    Expectation: expect correct result.
+    """
+    if mode == "pynative":
+        ms.context.set_context(mode=ms.PYNATIVE_MODE)
+
+    # Test with empty tensors - this should handle empty batch dimensions
+    input_np = np.random.randn(2, 2).astype(np.float32)
+    batch1_np = np.empty((0, 2, 3)).astype(np.float32)  # Empty batch dimension
+    batch2_np = np.empty((0, 3, 2)).astype(np.float32)  # Empty batch dimension
+
+    input_ms = ms.Tensor(input_np)
+    batch1_ms = ms.Tensor(batch1_np)
+    batch2_ms = ms.Tensor(batch2_np)
+
+    input_torch = torch.tensor(input_np)
+    batch1_torch = torch.tensor(batch1_np)
+    batch2_torch = torch.tensor(batch2_np)
+
+    output_ms = addbmm_forward_func(input_ms, batch1_ms, batch2_ms)
+    expect = generate_expect_forward_output(input_torch, batch1_torch, batch2_torch)
+
+    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 0, 0, equal_nan=True)
+
+
+@arg_mark(
+    plat_marks=["cpu_linux"],
+    level_mark="level0",
+    card_mark="onecard",
+    essential_mark="essential",
+)
+@pytest.mark.parametrize("mode", ["pynative"])
+def test_addbmm_non_contiguous(mode):
+    """
+    Feature: test addbmm with non-contiguous tensors.
+    Description: test addbmm op with non-contiguous input tensors.
+    Expectation: expect correct result.
+    """
+    if mode == "pynative":
+        ms.context.set_context(mode=ms.PYNATIVE_MODE)
+
+    # Create tensors and make them non-contiguous by transposing
+    input_np = np.random.randn(4, 4).astype(np.float32)
+    batch1_np = np.random.randn(3, 4, 5).astype(np.float32)
+    batch2_np = np.random.randn(3, 5, 4).astype(np.float32)
+
+    # Make tensors non-contiguous by creating strided views
+    # Create larger arrays and take non-contiguous slices
+    big_input = np.random.randn(8, 8).astype(np.float32)
+    input_np_noncontig = big_input[::2, ::2]  # Strided slice creates non-contiguous array
+
+    big_batch1 = np.random.randn(6, 8, 10).astype(np.float32)
+    batch1_np_noncontig = big_batch1[::2, ::2, ::2]  # Non-contiguous batch1
+
+    big_batch2 = np.random.randn(6, 10, 8).astype(np.float32)
+    batch2_np_noncontig = big_batch2[::2, ::2, ::2]  # Non-contiguous batch2
+
+    input_ms = ms.Tensor(input_np_noncontig)
+    batch1_ms = ms.Tensor(batch1_np_noncontig)
+    batch2_ms = ms.Tensor(batch2_np_noncontig)
+
+    input_torch = torch.tensor(input_np_noncontig)
+    batch1_torch = torch.tensor(batch1_np_noncontig)
+    batch2_torch = torch.tensor(batch2_np_noncontig)
+
+    output_ms = addbmm_forward_func(input_ms, batch1_ms, batch2_ms)
+    expect = generate_expect_forward_output(input_torch, batch1_torch, batch2_torch)
+
+    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 0, 0, equal_nan=True)
+
+
+@arg_mark(
+    plat_marks=["cpu_linux"],
+    level_mark="level0",
+    card_mark="onecard",
+    essential_mark="essential",
+)
+@pytest.mark.parametrize("mode", ["pynative"])
+def test_addbmm_with_high_precision_comparison(mode):
+    """
+    Feature: test addbmm with high precision comparison settings.
+    Description: test addbmm op with rtol=0, atol=0 and equal_nan=True.
+    Expectation: expect correct result.
+    """
+    if mode == "pynative":
+        ms.context.set_context(mode=ms.PYNATIVE_MODE)
+
+    input_np = np.random.randn(3, 3).astype(np.float32)
+    batch1_np = np.random.randn(2, 3, 4).astype(np.float32)
+    batch2_np = np.random.randn(2, 4, 3).astype(np.float32)
+
+    input_ms = ms.Tensor(input_np)
+    batch1_ms = ms.Tensor(batch1_np)
+    batch2_ms = ms.Tensor(batch2_np)
+
+    input_torch = torch.tensor(input_np)
+    batch1_torch = torch.tensor(batch1_np)
+    batch2_torch = torch.tensor(batch2_np)
+
+    output_ms = addbmm_forward_func(input_ms, batch1_ms, batch2_ms)
+    expect = generate_expect_forward_output(input_torch, batch1_torch, batch2_torch)
+
+    # Using rtol=0, atol=0 and equal_nan=True for precise comparison
+    # First ensure the tensor is properly computed before converting to numpy
+    output_np = output_ms.asnumpy()
+    expect_np = expect.detach().numpy()
+    allclose_nparray(output_np, expect_np, 0, 0, equal_nan=True)
+
+
+@arg_mark(
+    plat_marks=["cpu_linux"],
+    level_mark="level0",
+    card_mark="onecard",
+    essential_mark="essential",
+)
+@pytest.mark.parametrize("mode", ["pynative"])
+def test_addbmm_reverse_validation(mode):
+    """
+    Feature: test addbmm with reverse scenario validation.
+    Description: test addbmm op and validate results against PyTorch implementation in reverse.
+    Expectation: expect correct result.
+    """
+    if mode == "pynative":
+        ms.context.set_context(mode=ms.PYNATIVE_MODE)
+
+    # Test with specific values to verify the computation
+    input_np = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+    batch1_np = np.array([[[1.0, 1.0], [1.0, 1.0]], [[2.0, 0.0], [0.0, 2.0]]], dtype=np.float32)
+    batch2_np = np.array([[[1.0, 0.0], [0.0, 1.0]], [[1.0, 1.0], [1.0, 1.0]]], dtype=np.float32)
+
+    input_ms = ms.Tensor(input_np)
+    batch1_ms = ms.Tensor(batch1_np)
+    batch2_ms = ms.Tensor(batch2_np)
+
+    input_torch = torch.tensor(input_np)
+    batch1_torch = torch.tensor(batch1_np)
+    batch2_torch = torch.tensor(batch2_np)
+
+    # Calculate MindSpore result
+    output_ms = addbmm_forward_func(input_ms, batch1_ms, batch2_ms)
+    ms_result = output_ms.asnumpy()
+
+    # Calculate PyTorch result
+    expect = generate_expect_forward_output(input_torch, batch1_torch, batch2_torch)
+    torch_result = expect.detach().numpy()
+
+    # Validate that results are close with high precision
+    allclose_nparray(ms_result, torch_result, 0, 0, equal_nan=True)
+
+    # Additional validation: manual calculation
+    # batch1 @ batch2 for first batch: [[1,1],[1,1]] @ [[1,0],[0,1]] = [[1,1],[1,1]]
+    # batch1 @ batch2 for second batch: [[2,0],[0,2]] @ [[1,1],[1,1]] = [[2,2],[2,2]]
+    # Sum: [[1,1],[1,1]] + [[2,2],[2,2]] = [[3,3],[3,3]]
+    # Final result: 1*[[1,2],[3,4]] + 1*[[3,3],[3,3]] = [[4,5],[6,7]]
+    expected_manual = np.array([[4.0, 5.0], [6.0, 7.0]], dtype=np.float32)
+    allclose_nparray(ms_result, expected_manual, 0, 0, equal_nan=True)
