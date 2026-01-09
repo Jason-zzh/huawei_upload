@@ -16,7 +16,7 @@
 # pylint: disable=unused-variable
 import numpy as np
 import mindspore as ms
-from mindspore import mint
+from mindspore import mint, ops
 from mindspore.common.api import _pynative_executor
 from tests.utils.tools import allclose_nparray
 from tests.utils.mark_utils import arg_mark
@@ -32,8 +32,24 @@ def generate_expect_forward_output(input_tensor, mat1, mat2, beta=1, alpha=1):
     return torch.addmm(input_tensor, mat1, mat2, beta=beta, alpha=alpha)
 
 
+def generate_expect_backward_output(input_tensor, mat1, mat2, grad_output, beta=1, alpha=1):
+    """Generate expected backward propagation results using PyTorch."""
+    input_tensor = torch.tensor(input_tensor, requires_grad=True)
+    mat1 = torch.tensor(mat1, requires_grad=True)
+    mat2 = torch.tensor(mat2, requires_grad=True)
+    output = torch.addmm(input_tensor, mat1, mat2, beta=beta, alpha=alpha)
+    output.backward(torch.tensor(grad_output))  # Convert grad_output to tensor
+    return input_tensor.grad, mat1.grad, mat2.grad
+
+
 def addmm_forward_func(input_tensor, mat1, mat2, beta=1, alpha=1):
     return mint.addmm(input_tensor, mat1, mat2, beta=beta, alpha=alpha)
+
+
+def addmm_backward_func(input_tensor, mat1, mat2, beta=1, alpha=1):
+    def forward_func(input_tensor, mat1, mat2):
+        return mint.addmm(input_tensor, mat1, mat2, beta=beta, alpha=alpha)
+    return ops.grad(forward_func, (0, 1, 2))(input_tensor, mat1, mat2)
 
 
 @arg_mark(
@@ -58,7 +74,7 @@ def test_addmm_normal(mode):
     mat2 = ms.Tensor(np.random.randn(5, 4).astype(np.float32))
     ms_output = addmm_forward_func(input_tensor, mat1, mat2)
     expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
-    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 1e-3, 1e-3)
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
 
 
 @arg_mark(
@@ -85,7 +101,7 @@ def test_addmm_with_beta_alpha(mode):
     alpha = 2.0
     ms_output = addmm_forward_func(input_tensor, mat1, mat2, beta, alpha)
     expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy(), beta, alpha)
-    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 1e-3, 1e-3)
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
 
 
 @arg_mark(
@@ -94,20 +110,23 @@ def test_addmm_with_beta_alpha(mode):
     card_mark="onecard",
     essential_mark="unessential",
 )
-@pytest.mark.parametrize("dtype", [np.float32])  # Only float32 for now as it's the most common
-def test_addmm_dtypes(dtype):
+@pytest.mark.parametrize("mode", ["pynative", "KBK"])
+def test_addmm_dtypes(mode):
     """
     Feature: dtype coverage for addmm.
     Description: test addmm op with different dtypes.
     Expectation: expect correct result.
     """
-    ms.context.set_context(mode=ms.PYNATIVE_MODE)
-    input_tensor = ms.Tensor(np.random.randn(2, 3).astype(dtype))
-    mat1 = ms.Tensor(np.random.randn(2, 4).astype(dtype))
-    mat2 = ms.Tensor(np.random.randn(4, 3).astype(dtype))
+    if mode == "pynative":
+        ms.context.set_context(mode=ms.PYNATIVE_MODE)
+    else:
+        ms.context.set_context(mode=ms.GRAPH_MODE)
+    input_tensor = ms.Tensor(np.random.randn(2, 3).astype(np.float32))
+    mat1 = ms.Tensor(np.random.randn(2, 4).astype(np.float32))
+    mat2 = ms.Tensor(np.random.randn(4, 3).astype(np.float32))
     ms_output = addmm_forward_func(input_tensor, mat1, mat2)
     expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
-    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 1e-3, 1e-3)
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
 
 
 @arg_mark(
@@ -116,20 +135,27 @@ def test_addmm_dtypes(dtype):
     card_mark="onecard",
     essential_mark="unessential",
 )
-def test_addmm_edge_cases():
+@pytest.mark.parametrize("mode", ["pynative", "KBK"])
+def test_addmm_backward(mode):
     """
-    Feature: edge cases for addmm.
-    Description: test addmm op with edge cases like scalar inputs, empty tensors.
-    Expectation: expect correct result or proper error handling.
+    Feature: standard backward functionality for addmm.
+    Description: test addmm op backward with normal inputs.
+    Expectation: expect correct result.
     """
-    ms.context.set_context(mode=ms.PYNATIVE_MODE)
-    # Test with 1x1 matrices
-    input_tensor = ms.Tensor(np.random.randn(1, 1).astype(np.float32))
-    mat1 = ms.Tensor(np.random.randn(1, 1).astype(np.float32))
-    mat2 = ms.Tensor(np.random.randn(1, 1).astype(np.float32))
-    ms_output = addmm_forward_func(input_tensor, mat1, mat2)
-    expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
-    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 1e-3, 1e-3)
+    if mode == "pynative":
+        ms.context.set_context(mode=ms.PYNATIVE_MODE)
+    else:
+        ms.context.set_context(mode=ms.GRAPH_MODE)
+    input_tensor = ms.Tensor(np.random.randn(2, 3).astype(np.float32))
+    mat1 = ms.Tensor(np.random.randn(2, 4).astype(np.float32))
+    mat2 = ms.Tensor(np.random.randn(4, 3).astype(np.float32))
+    grad_input_ms, grad_mat1_ms, grad_mat2_ms = addmm_backward_func(input_tensor, mat1, mat2)
+    grad_input_torch, grad_mat1_torch, grad_mat2_torch = generate_expect_backward_output(
+        input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy(),
+        np.ones_like(input_tensor.asnumpy()))
+    allclose_nparray(grad_input_ms.asnumpy(), grad_input_torch.numpy(), 0, 0, equal_nan=True)
+    allclose_nparray(grad_mat1_ms.asnumpy(), grad_mat1_torch.numpy(), 0, 0, equal_nan=True)
+    allclose_nparray(grad_mat2_ms.asnumpy(), grad_mat2_torch.numpy(), 0, 0, equal_nan=True)
 
 
 @arg_mark(
@@ -138,19 +164,117 @@ def test_addmm_edge_cases():
     card_mark="onecard",
     essential_mark="unessential",
 )
-def test_addmm_with_nan_inf():
+@pytest.mark.parametrize("mode", ["pynative", "KBK"])
+def test_addmm_backward_with_beta_alpha(mode):
     """
-    Feature: NaN and Inf handling for addmm.
-    Description: test addmm op with NaN and Inf values.
+    Feature: standard backward functionality for addmm with beta and alpha.
+    Description: test addmm op backward with custom beta and alpha values.
+    Expectation: expect correct result.
+    """
+    if mode == "pynative":
+        ms.context.set_context(mode=ms.PYNATIVE_MODE)
+    else:
+        ms.context.set_context(mode=ms.GRAPH_MODE)
+    input_tensor = ms.Tensor(np.random.randn(2, 3).astype(np.float32))
+    mat1 = ms.Tensor(np.random.randn(2, 4).astype(np.float32))
+    mat2 = ms.Tensor(np.random.randn(4, 3).astype(np.float32))
+    beta = 0.5
+    alpha = 2.0
+    grad_input_ms, grad_mat1_ms, grad_mat2_ms = addmm_backward_func(input_tensor, mat1, mat2, beta, alpha)
+    grad_input_torch, grad_mat1_torch, grad_mat2_torch = generate_expect_backward_output(
+        input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy(), 
+        np.ones_like(input_tensor.asnumpy()), beta, alpha)
+    allclose_nparray(grad_input_ms.asnumpy(), grad_input_torch.numpy(), 0, 0, equal_nan=True)
+    allclose_nparray(grad_mat1_ms.asnumpy(), grad_mat1_torch.numpy(), 0, 0, equal_nan=True)
+    allclose_nparray(grad_mat2_ms.asnumpy(), grad_mat2_torch.numpy(), 0, 0, equal_nan=True)
+
+
+@arg_mark(
+    plat_marks=["cpu_linux"],
+    level_mark="level0",
+    card_mark="onecard",
+    essential_mark="unessential",
+)
+def test_addmm_zero_matrices():
+    """
+    Feature: zero matrix handling for addmm.
+    Description: test addmm op with zero matrices.
     Expectation: expect correct result.
     """
     ms.context.set_context(mode=ms.PYNATIVE_MODE)
-    input_tensor = ms.Tensor(np.array([[1.0, np.nan], [np.inf, -np.inf]], dtype=np.float32))
-    mat1 = ms.Tensor(np.array([[1.0, 0], [0, 1.0]], dtype=np.float32))
-    mat2 = ms.Tensor(np.array([[1.0, 0], [0, 1.0]], dtype=np.float32))
+    input_tensor = ms.Tensor(np.zeros((2, 3), dtype=np.float32))
+    mat1 = ms.Tensor(np.zeros((2, 4), dtype=np.float32))
+    mat2 = ms.Tensor(np.zeros((4, 3), dtype=np.float32))
     ms_output = addmm_forward_func(input_tensor, mat1, mat2)
     expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
-    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 1e-3, 1e-3, equal_nan=True)
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
+
+
+@arg_mark(
+    plat_marks=["cpu_linux"],
+    level_mark="level0",
+    card_mark="onecard",
+    essential_mark="unessential",
+)
+def test_addmm_large_values():
+    """
+    Feature: large value handling for addmm.
+    Description: test addmm op with large values.
+    Expectation: expect correct result.
+    """
+    ms.context.set_context(mode=ms.PYNATIVE_MODE)
+    input_tensor = ms.Tensor(np.random.uniform(1e6, 1e9, (2, 3)).astype(np.float32))
+    mat1 = ms.Tensor(np.random.uniform(1e6, 1e9, (2, 4)).astype(np.float32))
+    mat2 = ms.Tensor(np.random.uniform(1e6, 1e9, (4, 3)).astype(np.float32))
+    ms_output = addmm_forward_func(input_tensor, mat1, mat2)
+    expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
+
+
+@arg_mark(
+    plat_marks=["cpu_linux"],
+    level_mark="level0",
+    card_mark="onecard",
+    essential_mark="unessential",
+)
+def test_addmm_small_values():
+    """
+    Feature: small value handling for addmm.
+    Description: test addmm op with very small values.
+    Expectation: expect correct result.
+    """
+    ms.context.set_context(mode=ms.PYNATIVE_MODE)
+    input_tensor = ms.Tensor(np.random.uniform(-1e-9, 1e-9, (2, 3)).astype(np.float32))
+    mat1 = ms.Tensor(np.random.uniform(-1e-9, 1e-9, (2, 4)).astype(np.float32))
+    mat2 = ms.Tensor(np.random.uniform(-1e-9, 1e-9, (4, 3)).astype(np.float32))
+    ms_output = addmm_forward_func(input_tensor, mat1, mat2)
+    expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
+
+
+@arg_mark(
+    plat_marks=["cpu_linux"],
+    level_mark="level0",
+    card_mark="onecard",
+    essential_mark="unessential",
+)
+def test_addmm_non_contiguous():
+    """
+    Feature: non-contiguous tensor handling for addmm.
+    Description: test addmm op with non-contiguous tensors.
+    Expectation: expect correct result.
+    """
+    ms.context.set_context(mode=ms.PYNATIVE_MODE)
+    # Create larger tensors and slice them to make them non-contiguous
+    full_tensor = ms.Tensor(np.random.randn(4, 6).astype(np.float32))
+    input_tensor = full_tensor[::2, ::2]  # Non-contiguous slice
+    full_mat1 = ms.Tensor(np.random.randn(4, 8).astype(np.float32))
+    mat1 = full_mat1[::2, ::2]  # Non-contiguous slice
+    full_mat2 = ms.Tensor(np.random.randn(8, 6).astype(np.float32))
+    mat2 = full_mat2[::2, ::2]  # Non-contiguous slice
+    ms_output = addmm_forward_func(input_tensor, mat1, mat2)
+    expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
 
 
 @arg_mark(
@@ -160,27 +284,100 @@ def test_addmm_with_nan_inf():
     essential_mark="unessential",
 )
 @pytest.mark.parametrize("mode", ["pynative"])
-def test_addmm_vmap(mode):
+def test_addmm_dynamic_shape(mode):
     """
-    Feature: vmap functionality for addmm.
-    Description: test addmm op with vmap.
+    Feature: dynamic shape support for addmm.
+    Description: test addmm op with dynamic shapes.
     Expectation: expect correct result.
     """
     del mode
     ms.context.set_context(mode=ms.PYNATIVE_MODE)
-    # This is a basic vmap test - creating batched inputs
-    batch_size = 2
-    input_tensor = ms.Tensor(np.random.randn(batch_size, 3, 4).astype(np.float32))
-    mat1 = ms.Tensor(np.random.randn(batch_size, 3, 5).astype(np.float32))
-    mat2 = ms.Tensor(np.random.randn(batch_size, 5, 4).astype(np.float32))
-    # Process each batch item separately to simulate vmap behavior
-    results = []
-    for i in range(batch_size):
-        result = addmm_forward_func(input_tensor[i], mat1[i], mat2[i])
-        results.append(result.asnumpy())
-    expect_results = []
-    for i in range(batch_size):
-        expect = generate_expect_forward_output(input_tensor[i].asnumpy(), mat1[i].asnumpy(), mat2[i].asnumpy())
-        expect_results.append(expect.numpy())
-    for ms_result, expect_result in zip(results, expect_results):
-        allclose_nparray(ms_result, expect_result, 1e-3, 1e-3)
+    # Test different matrix dimensions
+    shapes = [
+        ((1, 1), (1, 1), (1, 1)),  # 1x1 matrices
+        ((1, 5), (1, 3), (3, 5)),  # Row vector
+        ((5, 1), (5, 3), (3, 1)),  # Column vector
+        ((10, 10), (10, 10), (10, 10)),  # Square matrices
+        ((5, 8), (5, 12), (12, 8)),  # Rectangular matrices
+    ]
+    for input_shape, mat1_shape, mat2_shape in shapes:
+        input_tensor = ms.Tensor(np.random.randn(*input_shape).astype(np.float32))
+        mat1 = ms.Tensor(np.random.randn(*mat1_shape).astype(np.float32))
+        mat2 = ms.Tensor(np.random.randn(*mat2_shape).astype(np.float32))
+        ms_output = addmm_forward_func(input_tensor, mat1, mat2)
+        expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
+        allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
+
+
+@arg_mark(
+    plat_marks=["cpu_linux"],
+    level_mark="level0",
+    card_mark="onecard",
+    essential_mark="unessential",
+)
+def test_addmm_broadcasting():
+    """
+    Feature: broadcasting support for addmm.
+    Description: test addmm op with broadcasting scenarios.
+    Expectation: expect correct result when input tensor has different dimensions.
+    """
+    ms.context.set_context(mode=ms.PYNATIVE_MODE)
+    # Test broadcasting with scalar-like input (1,1)
+    input_tensor = ms.Tensor(np.random.randn(1, 1).astype(np.float32))  # Broadcasting from (1,1)
+    mat1 = ms.Tensor(np.random.randn(5, 3).astype(np.float32))
+    mat2 = ms.Tensor(np.random.randn(3, 4).astype(np.float32))
+    ms_output = addmm_forward_func(input_tensor, mat1, mat2)
+    expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
+    # Test broadcasting with row vector (1, n)
+    input_tensor = ms.Tensor(np.random.randn(1, 4).astype(np.float32))  # Broadcasting row vector
+    mat1 = ms.Tensor(np.random.randn(5, 3).astype(np.float32))
+    mat2 = ms.Tensor(np.random.randn(3, 4).astype(np.float32))
+    ms_output = addmm_forward_func(input_tensor, mat1, mat2)
+    expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
+    # Test broadcasting with column vector (m, 1)
+    input_tensor = ms.Tensor(np.random.randn(5, 1).astype(np.float32))  # Broadcasting column vector
+    mat1 = ms.Tensor(np.random.randn(5, 3).astype(np.float32))
+    mat2 = ms.Tensor(np.random.randn(3, 4).astype(np.float32))
+    ms_output = addmm_forward_func(input_tensor, mat1, mat2)
+    expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
+
+
+@arg_mark(
+    plat_marks=["cpu_linux"],
+    level_mark="level0",
+    card_mark="onecard",
+    essential_mark="unessential",
+)
+def test_addmm_empty_tensors():
+    """
+    Feature: empty tensor handling for addmm.
+    Description: test addmm op with empty tensors.
+    Expectation: expect correct result or appropriate error handling.
+    """
+    ms.context.set_context(mode=ms.PYNATIVE_MODE)
+    # Test with empty input tensor (0, n)
+    input_tensor = ms.Tensor(np.random.randn(0, 3).astype(np.float32))
+    mat1 = ms.Tensor(np.random.randn(0, 4).astype(np.float32))
+    mat2 = ms.Tensor(np.random.randn(4, 3).astype(np.float32))
+    ms_output = addmm_forward_func(input_tensor, mat1, mat2)
+    expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
+    # Test with empty mat1 tensor
+    input_tensor = ms.Tensor(np.random.randn(3, 5).astype(np.float32))
+    mat1 = ms.Tensor(np.random.randn(3, 0).astype(np.float32))
+    mat2 = ms.Tensor(np.random.randn(0, 5).astype(np.float32))
+    ms_output = addmm_forward_func(input_tensor, mat1, mat2)
+    expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
+    # Test with empty mat2 tensor (should fail due to dimension mismatch)
+    # Note: This would result in mat1 @ mat2 being (3,0) @ (0,5) = (3,5), which should work
+    input_tensor = ms.Tensor(np.random.randn(3, 5).astype(np.float32))
+    mat1 = ms.Tensor(np.random.randn(3, 0).astype(np.float32))
+    mat2 = ms.Tensor(np.random.randn(0, 5).astype(np.float32))
+    ms_output = addmm_forward_func(input_tensor, mat1, mat2)
+    expect_output = generate_expect_forward_output(input_tensor.asnumpy(), mat1.asnumpy(), mat2.asnumpy())
+    allclose_nparray(ms_output.asnumpy(), expect_output.numpy(), 0, 0, equal_nan=True)
+
