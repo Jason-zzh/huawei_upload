@@ -67,19 +67,16 @@ def test_addcdiv_basic(mode):
     Expectation: The results of MindSpore and PyTorch should be consistent within tolerance.
     """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
-    
     input_tensor = torch.tensor([1.0, 2.0, 3.0])
     tensor1 = torch.tensor([4.0, 5.0, 6.0])
     tensor2 = torch.tensor([2.0, 2.0, 2.0])
-    
     # Test with default value (1.0)
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -92,19 +89,16 @@ def test_addcdiv_with_value(mode):
     Expectation: The results of MindSpore and PyTorch should be consistent when using a custom value parameter.
     """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
-    
     input_tensor = torch.tensor([1.0, 2.0, 3.0])
     tensor1 = torch.tensor([4.0, 5.0, 6.0])
     tensor2 = torch.tensor([2.0, 2.0, 2.0])
     value = 0.5
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2, value=value)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2, value=value)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -124,13 +118,17 @@ def test_addcdiv_dtype_coverage(mode, dtype):
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
     elif mode == 'KBK':
         ms.context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     shape = (2, 3)
-    input_tensor = torch.tensor(generate_random_input(shape, dtype), dtype=torch.from_numpy(np.array(0, dtype=dtype)).dtype if dtype in [np.int32, np.int64] else torch.from_numpy(np.array(0, dtype=dtype)).dtype)
-    tensor1 = torch.tensor(generate_random_input(shape, dtype), dtype=torch.from_numpy(np.array(0, dtype=dtype)).dtype if dtype in [np.int32, np.int64] else torch.from_numpy(np.array(0, dtype=dtype)).dtype)
-    tensor2 = torch.tensor(generate_random_input(shape, dtype), dtype=torch.from_numpy(np.array(0, dtype=dtype)).dtype if dtype in [np.int32, np.int64] else torch.from_numpy(np.array(0, dtype=dtype)).dtype)
+    input_tensor = torch.tensor(generate_random_input(shape, dtype),
+                                dtype=torch.from_numpy(np.array(0, dtype=dtype)).dtype
+                                if dtype in [np.int32, np.int64] else torch.from_numpy(np.array(0, dtype=dtype)).dtype)
+    tensor1 = torch.tensor(generate_random_input(shape, dtype),
+                           dtype=torch.from_numpy(np.array(0, dtype=dtype)).dtype
+                           if dtype in [np.int32, np.int64] else torch.from_numpy(np.array(0, dtype=dtype)).dtype)
+    tensor2 = torch.tensor(generate_random_input(shape, dtype),
+                           dtype=torch.from_numpy(np.array(0, dtype=dtype)).dtype
+                           if dtype in [np.int32, np.int64] else torch.from_numpy(np.array(0, dtype=dtype)).dtype)
     value = 0.5
-    
     # Convert integer types to float for torch operations since torch.addcdiv expects floating point
     if dtype in [np.int32, np.int64]:
         torch_input = input_tensor.float()
@@ -145,10 +143,8 @@ def test_addcdiv_dtype_coverage(mode, dtype):
         ms_input = ms.Tensor(input_tensor.numpy())
         ms_tensor1 = ms.Tensor(tensor1.numpy())
         ms_tensor2 = ms.Tensor(tensor2.numpy())
-    
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2, value=value)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-3, atol=1e-3)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -161,36 +157,30 @@ def test_addcdiv_edge_cases(mode):
     Expectation: Special values like NaN and Inf should be handled consistently between MindSpore and PyTorch.
     """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
-    
     # Test with NaN
     input_tensor = torch.tensor([float('nan'), 2.0, 3.0])
     tensor1 = torch.tensor([4.0, 5.0, 6.0])
     tensor2 = torch.tensor([2.0, 2.0, 2.0])
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
     # Check that NaN values are preserved
     assert np.isnan(ms_result.asnumpy()[0])
-    np.testing.assert_allclose(ms_result.asnumpy()[1:], torch_result.numpy()[1:], rtol=1e-5, atol=1e-5)
-    
+    np.testing.assert_allclose(ms_result.asnumpy()[1:], torch_result.numpy()[1:], rtol=0, atol=0, equal_nan= True)
     # Test with Inf
     input_tensor = torch.tensor([float('inf'), 2.0, 3.0])
     tensor1 = torch.tensor([4.0, 5.0, 6.0])
     tensor2 = torch.tensor([2.0, 2.0, 2.0])
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
     # Check that Inf values are preserved
     assert np.isinf(ms_result.asnumpy()[0])
-    np.testing.assert_allclose(ms_result.asnumpy()[1:], torch_result.numpy()[1:], rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(ms_result.asnumpy()[1:], torch_result.numpy()[1:], rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -203,28 +193,24 @@ def test_addcdiv_division_by_zero(mode):
     Expectation: Division by zero should produce Inf values consistently between MindSpore and PyTorch.
     """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
-    
     input_tensor = torch.tensor([1.0, 2.0, 3.0])
     tensor1 = torch.tensor([4.0, 5.0, 6.0])
     tensor2 = torch.tensor([0.0, 2.0, 0.0])  # Division by zero in some elements
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
     # Check that inf values match
     torch_mask = torch.isinf(torch_result)
     ms_mask = np.isinf(ms_result.asnumpy())
     assert np.array_equal(ms_mask, torch_mask.numpy())
-    
     # Compare finite values
     finite_mask = ~torch.isinf(torch_result)
     np.testing.assert_allclose(
         ms_result.asnumpy()[finite_mask.numpy()], 
         torch_result.numpy()[finite_mask.numpy()], 
-        rtol=1e-5, atol=1e-5
+        rtol=0, atol=0, equal_nan= True
     )
 
 
@@ -238,32 +224,26 @@ def test_addcdiv_shapes(mode):
     Expectation: The results of MindSpore and PyTorch should be consistent with various tensor shapes and broadcasting.
     """
     ms.context.set_context(mode=ms.PYNATIVE_MODE if mode == 'pynative' else ms.GRAPH_MODE, jit_level="O0")
-    
     # Test with 2D tensors
     input_tensor = torch.randn(2, 3)
     tensor1 = torch.randn(2, 3)
     tensor2 = torch.randn(2, 3)
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5)
-    
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
     # Test with broadcasting
     input_tensor = torch.randn(2, 3)
     tensor1 = torch.randn(2, 1)  # Will be broadcast
     tensor2 = torch.randn(1, 3)  # Will be broadcast
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -279,32 +259,26 @@ def test_addcdiv_special_values(mode):
         context.set_context(mode=ms.PYNATIVE_MODE)
     else:
         context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     # Test with inf values
     input_tensor = torch.tensor([1.0, float('inf'), -float('inf')])
     tensor1 = torch.tensor([2.0, 3.0, 4.0])
     tensor2 = torch.tensor([1.0, 2.0, 3.0])
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5, equal_nan=True)
-    
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
     # Test with nan values
     input_tensor = torch.tensor([1.0, float('nan'), 3.0])
     tensor1 = torch.tensor([2.0, 3.0, 4.0])
     tensor2 = torch.tensor([1.0, 2.0, 3.0])
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5, equal_nan=True)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -320,22 +294,18 @@ def test_addcdiv_non_contiguous(mode):
         context.set_context(mode=ms.PYNATIVE_MODE)
     else:
         context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     # Create non-contiguous tensors using slicing
     full_tensor = torch.randn(4, 6)
     input_tensor = full_tensor[::2, ::2]  # Non-contiguous view
     tensor1 = torch.randn(2, 3)
     tensor2 = torch.randn(2, 3)
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
-    
     # Convert to MindSpore with same shape
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -351,35 +321,28 @@ def test_addcdiv_vmap(mode):
         context.set_context(mode=ms.PYNATIVE_MODE)
     else:
         context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     def torch_addcdiv_batched(input_batch, tensor1_batch, tensor2_batch):
         results = []
         for i in range(input_batch.shape[0]):
             result = torch.addcdiv(input_batch[i], tensor1_batch[i], tensor2_batch[i])
             results.append(result)
         return torch.stack(results)
-    
     batch_size = 3
     shape = (2, 3)
-    
     input_batch = torch.randn(batch_size, *shape)
     tensor1_batch = torch.randn(batch_size, *shape)
     tensor2_batch = torch.randn(batch_size, *shape)
-    
     torch_result = torch_addcdiv_batched(input_batch, tensor1_batch, tensor2_batch)
-    
     ms_input_batch = ms.Tensor(input_batch.numpy())
     ms_tensor1_batch = ms.Tensor(tensor1_batch.numpy())
     ms_tensor2_batch = ms.Tensor(tensor2_batch.numpy())
-    
     # Implement manual batching since MindSpore vmap might not directly support mint.addcdiv
     ms_results = []
     for i in range(batch_size):
         result = mint.addcdiv(ms_input_batch[i], ms_tensor1_batch[i], ms_tensor2_batch[i])
         ms_results.append(result)
     ms_result = ms.ops.stack(ms_results)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -395,32 +358,26 @@ def test_addcdiv_backward(mode):
         context.set_context(mode=ms.PYNATIVE_MODE)
     else:
         context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     # Test backward pass using PyTorch
     input_tensor = torch.randn(2, 3, requires_grad=True)
     tensor1 = torch.randn(2, 3, requires_grad=True)
     tensor2 = torch.randn(2, 3, requires_grad=True)
     value = 0.5
-    
     torch_output = torch.addcdiv(input_tensor, tensor1, tensor2, value=value)
     torch_loss = torch_output.sum()
     torch_loss.backward()
-    
     # Test backward pass using MindSpore
     ms_input = ms.Tensor(input_tensor.detach().numpy())
     ms_tensor1 = ms.Tensor(tensor1.detach().numpy())
     ms_tensor2 = ms.Tensor(tensor2.detach().numpy())
-    
     def ms_addcdiv_forward(input_ms, tensor1_ms, tensor2_ms):
         return ops.sum(mint.addcdiv(input_ms, tensor1_ms, tensor2_ms, value=value))
-    
     ms_grad_fn = ops.grad(ms_addcdiv_forward, (0, 1, 2))
     ms_grad_input, ms_grad_tensor1, ms_grad_tensor2 = ms_grad_fn(ms_input, ms_tensor1, ms_tensor2)
-    
     # Compare gradients
-    np.testing.assert_allclose(ms_grad_input.asnumpy(), input_tensor.grad.numpy(), rtol=1e-5, atol=1e-5)
-    np.testing.assert_allclose(ms_grad_tensor1.asnumpy(), tensor1.grad.numpy(), rtol=1e-5, atol=1e-5)
-    np.testing.assert_allclose(ms_grad_tensor2.asnumpy(), tensor2.grad.numpy(), rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(ms_grad_input.asnumpy(), input_tensor.grad.numpy(), rtol=0, atol=0, equal_nan= True)
+    np.testing.assert_allclose(ms_grad_tensor1.asnumpy(), tensor1.grad.numpy(), rtol=0, atol=0, equal_nan= True)
+    np.testing.assert_allclose(ms_grad_tensor2.asnumpy(), tensor2.grad.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -437,18 +394,15 @@ def test_addcdiv_different_shapes(mode, shape):
         context.set_context(mode=ms.PYNATIVE_MODE)
     else:
         context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     input_tensor = torch.randn(shape)
     tensor1 = torch.randn(shape)
     tensor2 = torch.randn(shape)
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -464,19 +418,16 @@ def test_addcdiv_large_tensor(mode):
         context.set_context(mode=ms.PYNATIVE_MODE)
     else:
         context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     shape = (100, 100)  # Larger tensor
     input_tensor = torch.randn(shape)
     tensor1 = torch.randn(shape)
     tensor2 = torch.randn(shape)
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
           card_mark='onecard', essential_mark='essential')
@@ -492,26 +443,21 @@ def test_addcdiv_special_values_param(mode, special_type):
         context.set_context(mode=ms.PYNATIVE_MODE)
     else:
         context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     shape = (3, 4)
     input_tensor_np = generate_special_input(shape, np.float32, special_type)
     tensor1_np = generate_special_input(shape, np.float32, special_type)
     tensor2_np = generate_special_input(shape, np.float32, special_type)
-    
     # Ensure tensor2 doesn't contain zeros to prevent division by zero
     tensor2_np = np.where(tensor2_np == 0, 1.0, tensor2_np)
-    
     input_tensor = torch.tensor(input_tensor_np)
     tensor1 = torch.tensor(tensor1_np)
     tensor2 = torch.tensor(tensor2_np)
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5, equal_nan=True)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -527,19 +473,16 @@ def test_addcdiv_empty_tensor(mode):
         context.set_context(mode=ms.PYNATIVE_MODE)
     else:
         context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     # Test with empty tensors
     input_tensor = torch.tensor([])
     tensor1 = torch.tensor([])
     tensor2 = torch.tensor([])
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -556,32 +499,26 @@ def test_addcdiv_complex_dtypes(mode, dtype):
         context.set_context(mode=ms.PYNATIVE_MODE)
     else:
         context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     shape = (2, 3)
     # Generate random complex numbers
     input_real = np.random.uniform(-1, 1, shape).astype(np.float32 if dtype == np.complex64 else np.float64)
     input_imag = np.random.uniform(-1, 1, shape).astype(np.float32 if dtype == np.complex64 else np.float64)
     input_tensor_np = input_real + 1j * input_imag
-    
     tensor1_real = np.random.uniform(-1, 1, shape).astype(np.float32 if dtype == np.complex64 else np.float64)
     tensor1_imag = np.random.uniform(-1, 1, shape).astype(np.float32 if dtype == np.complex64 else np.float64)
     tensor1_np = tensor1_real + 1j * tensor1_imag
-    
     tensor2_real = np.random.uniform(0.1, 1, shape).astype(np.float32 if dtype == np.complex64 else np.float64)
     tensor2_imag = np.random.uniform(0.1, 1, shape).astype(np.float32 if dtype == np.complex64 else np.float64)
     tensor2_np = tensor2_real + 1j * tensor2_imag
-    
     input_tensor = torch.tensor(input_tensor_np)
     tensor1 = torch.tensor(tensor1_np)
     tensor2 = torch.tensor(tensor2_np)
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5, equal_nan=True)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0',
@@ -597,13 +534,11 @@ def test_addcdiv_error_handling(mode):
         context.set_context(mode=ms.PYNATIVE_MODE)
     else:
         context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     # Test with mismatched shapes that cannot be broadcast
     # Using shapes that are definitely incompatible
     ms_input = ms.Tensor([1.0, 2.0, 3.0])  # Shape (3,)
     ms_tensor1 = ms.Tensor([[1.0, 2.0], [3.0, 4.0]])  # Shape (2, 2)
     ms_tensor2 = ms.Tensor([1.0, 2.0])  # Shape (2,)
-    
     # MindSpore should raise an error for invalid broadcasting
     with pytest.raises((ValueError, RuntimeError)):
         result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
@@ -624,20 +559,16 @@ def test_addcdiv_functional_interface(mode):
         context.set_context(mode=ms.PYNATIVE_MODE)
     else:
         context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     input_tensor = torch.tensor([1.0, 2.0, 3.0])
     tensor1 = torch.tensor([4.0, 5.0, 6.0])
     tensor2 = torch.tensor([2.0, 2.0, 2.0])
-    
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
-    
     # Test through mint interface (which is the functional interface)
     ms_input = ms.Tensor(input_tensor.numpy())
     ms_tensor1 = ms.Tensor(tensor1.numpy())
     ms_tensor2 = ms.Tensor(tensor2.numpy())
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-    
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0', card_mark='onecard', essential_mark='essential')
 @pytest.mark.parametrize('mode', ['pynative', 'KBK'])
@@ -662,7 +593,6 @@ def test_addcdiv_dimensions(mode, shape):
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
     elif mode == 'KBK':
         ms.context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-
     dtype = np.float32
     # Generate inputs with the specified shape
     input_tensor_np = generate_random_input(shape, dtype)
@@ -670,18 +600,15 @@ def test_addcdiv_dimensions(mode, shape):
     # Ensure tensor2 doesn't have zeros to avoid division by zero
     tensor2_np = generate_random_input(shape, dtype)
     tensor2_np = np.where(tensor2_np == 0, 0.1, tensor2_np)
-
     input_tensor = torch.tensor(input_tensor_np, dtype=torch.float32)
     tensor1 = torch.tensor(tensor1_np, dtype=torch.float32)
     tensor2 = torch.tensor(tensor2_np, dtype=torch.float32)
-
     torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
     ms_input = ms.Tensor(input_tensor_np, dtype=ms.float32)
     ms_tensor1 = ms.Tensor(tensor1_np, dtype=ms.float32)
     ms_tensor2 = ms.Tensor(tensor2_np, dtype=ms.float32)
     ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-
-    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5)
+    np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=0, atol=0, equal_nan= True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0', card_mark='onecard', essential_mark='essential')
@@ -697,7 +624,6 @@ def test_addcdiv_dynamic_shape_advanced(mode, has_dynamic_rank):
         context.set_context(mode=ms.PYNATIVE_MODE)
     else:
         context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
-    
     base_shapes = [
         (None, 3),
         (5, None),
@@ -709,7 +635,6 @@ def test_addcdiv_dynamic_shape_advanced(mode, has_dynamic_rank):
             (None,),
             (3, None, None, 2)
         ])
-    
     for dynamic_shape in base_shapes:
         concrete_shape = []
         for dim in dynamic_shape:
@@ -718,34 +643,26 @@ def test_addcdiv_dynamic_shape_advanced(mode, has_dynamic_rank):
             else:
                 concrete_shape.append(dim)
         concrete_shape = tuple(concrete_shape)
-        
         # Generate inputs with the concrete shape
         input_tensor_np = generate_random_input(concrete_shape, np.float32)
         tensor1_np = generate_random_input(concrete_shape, np.float32)
         tensor2_np = generate_random_input(concrete_shape, np.float32)
         # Ensure tensor2 doesn't have zeros to avoid division by zero
         tensor2_np = np.where(tensor2_np == 0, 0.1, tensor2_np)
-
         input_tensor = torch.tensor(input_tensor_np)
         tensor1 = torch.tensor(tensor1_np)
         tensor2 = torch.tensor(tensor2_np)
-        
         torch_result = torch.addcdiv(input_tensor, tensor1, tensor2)
-        
         ms_input = ms.Tensor(input_tensor_np)
         ms_tensor1 = ms.Tensor(tensor1_np)
         ms_tensor2 = ms.Tensor(tensor2_np)
         ms_result = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2)
-        
         np.testing.assert_allclose(ms_result.asnumpy(), torch_result.numpy(), rtol=1e-5, atol=1e-5)
         assert ms_result.shape == concrete_shape, \
             f"Output shape mismatch: expected {concrete_shape}, got {ms_result.shape}"
-        
         # Test with value parameter as well
         torch_result_with_value = torch.addcdiv(input_tensor, tensor1, tensor2, value=0.5)
         ms_result_with_value = mint.addcdiv(ms_input, ms_tensor1, ms_tensor2, value=0.5)
-        
         np.testing.assert_allclose(ms_result_with_value.asnumpy(), torch_result_with_value.numpy(), rtol=1e-5, atol=1e-5)
         assert ms_result_with_value.shape == concrete_shape, \
             f"Output shape with value mismatch: expected {concrete_shape}, got {ms_result_with_value.shape}"
-
