@@ -423,7 +423,7 @@ def test_addbmm_dtype_coverage(mode, dtype):
     batch2_torch = torch.tensor(batch2_np)
     output_ms = addbmm_forward_func(input_ms, batch1_ms, batch2_ms)
     expect = generate_expect_forward_output(input_torch, batch1_torch, batch2_torch)
-    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 0.001, 0.001, equal_nan=True)
+    allclose_nparray(output_ms.asnumpy(), expect.detach().numpy(), 0, 0, equal_nan=True)
 
 @arg_mark(
     plat_marks=["cpu_linux"],
@@ -625,9 +625,9 @@ def test_addbmm_backward(mode):
             ms_success = False
             print(f"MindSpore backward failed: {e}")
         if ms_success:
-            allclose_nparray(grad_input_ms.asnumpy(), expected_input_grad, 0.001, 0.001, equal_nan=True)
-            allclose_nparray(grad_batch1_ms.asnumpy(), expected_batch1_grad, 0.001, 0.001, equal_nan=True)
-            allclose_nparray(grad_batch2_ms.asnumpy(), expected_batch2_grad, 0.001, 0.001, equal_nan=True)
+            allclose_nparray(grad_input_ms.asnumpy(), expected_input_grad, 0, 0, equal_nan=True)
+            allclose_nparray(grad_batch1_ms.asnumpy(), expected_batch1_grad, 0, 0, equal_nan=True)
+            allclose_nparray(grad_batch2_ms.asnumpy(), expected_batch2_grad, 0, 0, equal_nan=True)
         else:
             # If MindSpore doesn't support gradients but PyTorch does, that's acceptable
             # We'll just make sure MindSpore doesn't crash
