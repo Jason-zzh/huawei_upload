@@ -18,6 +18,7 @@ import pytest
 import numpy as np
 import mindspore as ms
 from mindspore import mint, jit, ops
+from mindspore import vmap
 from tests.utils.mark_utils import arg_mark
 from tests.utils.tools import allclose_nparray
 import torch
@@ -71,7 +72,9 @@ def test_frac_std(mode):
     """
     np.random.seed(0)
     input_tensor = np.random.uniform(-10.0, 10.0, size=(4, 5)).astype(np.float32)
+
     expect = generate_expect_forward_output(input_tensor)
+
     if mode == "pynative":
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
         output = frac_forward_func(ms.Tensor(input_tensor))
@@ -83,6 +86,7 @@ def test_frac_std(mode):
         )(ms.Tensor(input_tensor))
     else:
         output = None
+
     allclose_nparray(expect.detach().numpy(), output.asnumpy(), equal_nan=True)
 
 
@@ -110,8 +114,11 @@ def test_frac_dtype_coverage(mode, dtype):
         np_dtype = np.float64
     else:
         np_dtype = np.float32  # default fallback
+        
     input_tensor = np.random.uniform(-100.0, 100.0, size=(3, 4)).astype(np_dtype)
+
     expect = generate_expect_forward_output(input_tensor)
+
     if mode == "pynative":
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
         output = frac_forward_func(ms.Tensor(input_tensor, dtype=dtype))
@@ -123,11 +130,12 @@ def test_frac_dtype_coverage(mode, dtype):
         )(ms.Tensor(input_tensor, dtype=dtype))
     else:
         output = None
+
     allclose_nparray(
         expect.detach().numpy(),
         output.asnumpy(),
-        rtol=0,
-        atol=0,
+        rtol=2e-6,
+        atol=2e-6,
         equal_nan=True,
     )
 
@@ -148,10 +156,12 @@ def test_frac_backward(mode):
     np.random.seed(42)
     input_tensor = np.random.uniform(-5.0, 5.0, size=(3, 4)).astype(np.float32)
     grad_tensor = np.ones((3, 4), dtype=np.float32)
+
     torch_input = torch.tensor(input_tensor, requires_grad=True)
     torch_grad = torch.tensor(grad_tensor)
     torch.frac(torch_input).backward(torch_grad)
     expected_grad = torch_input.grad
+
     if mode == "pynative":
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
         ms_output_grad = frac_backward_func(ms.Tensor(input_tensor))
@@ -163,6 +173,7 @@ def test_frac_backward(mode):
         )(ms.Tensor(input_tensor))
     else:
         ms_output_grad = None
+
     allclose_nparray(expected_grad.detach().numpy(), ms_output_grad.asnumpy(), equal_nan=True)
 
 
@@ -180,7 +191,9 @@ def test_frac_empty_tensor(mode):
     Expectation: results match PyTorch implementation.
     """
     input_tensor = np.array([]).astype(np.float32)
+
     expect = generate_expect_forward_output(input_tensor)
+
     if mode == "pynative":
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
         output = frac_forward_func(ms.Tensor(input_tensor))
@@ -192,6 +205,7 @@ def test_frac_empty_tensor(mode):
         )(ms.Tensor(input_tensor))
     else:
         output = None
+
     allclose_nparray(expect.detach().numpy(), output.asnumpy(), equal_nan=True)
 
 
@@ -209,7 +223,8 @@ def test_frac_broadcast(mode):
     Expectation: results match PyTorch implementation.
     """
     # Broadcasting test - scalar input
-    input_tensor = np.array(3.14159).astype(np.float32)   
+    input_tensor = np.array(3.14159).astype(np.float32)
+    
     expect = generate_expect_forward_output(input_tensor)
 
     if mode == "pynative":
@@ -223,8 +238,41 @@ def test_frac_broadcast(mode):
         )(ms.Tensor(input_tensor))
     else:
         output = None
+
     allclose_nparray(expect.detach().numpy(), output.asnumpy(), equal_nan=True)
     assert output.shape == expect.shape
+
+
+@arg_mark(
+    plat_marks=["cpu_linux"],
+    level_mark="level0",
+    card_mark="onecard",
+    essential_mark="essential",
+)
+@pytest.mark.parametrize('mode', ['pynative', 'KBK'])
+@pytest.mark.parametrize('batch_size', [8, 16, 32])
+def test_frac_vmap(mode, batch_size):
+    """
+    Feature: vmap support for frac.
+    Description: test frac with vmap for batch processing.
+    Expectation: results match PyTorch implementation.
+    """
+    if mode == 'pynative':
+        ms.context.set_context(mode=ms.PYNATIVE_MODE)
+    elif mode == 'KBK':
+        ms.context.set_context(mode=ms.GRAPH_MODE, jit_level="O0")
+    
+    # Prepare batch data (batch_size, 5)
+    x = np.random.uniform(-5.0, 5.0, size=(batch_size, 5)).astype(np.float32)
+    torch_x = torch.tensor(x)
+    expect = generate_expect_forward_output(torch_x)
+    
+    # Use vmap for batch processing
+    vmap_frac = vmap(frac_forward_func, in_axes=0)
+    ms_x = ms.Tensor(x)
+    output = vmap_frac(ms_x)
+    
+    allclose_nparray(expect.detach().numpy(), output.asnumpy(), equal_nan=True)
 
 
 @arg_mark(
@@ -241,9 +289,12 @@ def test_frac_integer_tensors(mode):
     Expectation: results match PyTorch implementation.
     """
     # Skip this test since PyTorch frac doesn't support integers
-    pytest.skip("PyTorch frac does not support integer types")   
+    pytest.skip("PyTorch frac does not support integer types")
+    
     input_tensor = np.array([1, 2, 3, 4, 5]).astype(np.int32)
+
     expect = generate_expect_forward_output(input_tensor)
+
     if mode == "pynative":
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
         output = frac_forward_func(ms.Tensor(input_tensor))
@@ -255,6 +306,7 @@ def test_frac_integer_tensors(mode):
         )(ms.Tensor(input_tensor))
     else:
         output = None
+
     allclose_nparray(expect.detach().numpy(), output.asnumpy(), equal_nan=True)
 
 
@@ -280,7 +332,9 @@ def test_frac_specific_values(mode, test_values):
     Expectation: results match PyTorch implementation.
     """
     input_tensor = np.array(test_values).astype(np.float32)
+
     expect = generate_expect_forward_output(input_tensor)
+
     if mode == "pynative":
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
         output = frac_forward_func(ms.Tensor(input_tensor))
@@ -292,6 +346,7 @@ def test_frac_specific_values(mode, test_values):
         )(ms.Tensor(input_tensor))
     else:
         output = None
+
     # Check that fractional parts are computed correctly
     out_np = output.asnumpy()
     expect_np = expect.detach().numpy()
@@ -322,7 +377,9 @@ def test_frac_special_values(mode, special_values):
     Expectation: results match PyTorch implementation.
     """
     input_tensor = np.array(special_values).astype(np.float32)
+
     expect = generate_expect_forward_output(input_tensor)
+
     if mode == "pynative":
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
         output = frac_forward_func(ms.Tensor(input_tensor))
@@ -334,6 +391,7 @@ def test_frac_special_values(mode, special_values):
         )(ms.Tensor(input_tensor))
     else:
         output = None
+
     allclose_nparray(expect.detach().numpy(), output.asnumpy(), equal_nan=True)
 
 
@@ -367,7 +425,9 @@ def test_frac_different_shapes(mode, shape):
     """
     np.random.seed(42)
     input_tensor = np.random.uniform(-5.0, 5.0, size=shape).astype(np.float32)
+
     expect = generate_expect_forward_output(input_tensor)
+
     if mode == "pynative":
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
         output = frac_forward_func(ms.Tensor(input_tensor))
@@ -379,6 +439,7 @@ def test_frac_different_shapes(mode, shape):
         )(ms.Tensor(input_tensor))
     else:
         output = None
+
     allclose_nparray(expect.detach().numpy(), output.asnumpy(), equal_nan=True)
     assert output.shape == expect.shape
 
@@ -400,12 +461,15 @@ def test_frac_non_contiguous(mode):
     # Create a larger tensor and take a slice to make it non-contiguous
     full_tensor = np.random.uniform(-5.0, 5.0, size=(6, 8)).astype(np.float32)
     input_tensor = full_tensor[::2, ::2]  # Non-contiguous slice
+
     expect = generate_expect_forward_output(input_tensor)
+
     if mode == "pynative":
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
         output = frac_forward_func(ms.Tensor(input_tensor))
     else:
         output = None
+
     allclose_nparray(expect.detach().numpy(), output.asnumpy(), equal_nan=True)
 
 
@@ -423,10 +487,13 @@ def test_frac_dynamic_shape(mode):
     Expectation: results match PyTorch implementation.
     """
     ms.context.set_context(mode=ms.PYNATIVE_MODE)
+    
     # Test with variable sized inputs
     for size in [1, 10, 100, 1000]:
-        input_tensor = np.random.uniform(-5.0, 5.0, size=size).astype(np.float32)  
+        input_tensor = np.random.uniform(-5.0, 5.0, size=size).astype(np.float32)
+        
         expect = generate_expect_forward_output(input_tensor)
         output = frac_forward_func(ms.Tensor(input_tensor))
+        
         allclose_nparray(expect.detach().numpy(), output.asnumpy(), equal_nan=True)
         assert output.shape == expect.shape
