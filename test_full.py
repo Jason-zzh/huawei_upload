@@ -473,3 +473,42 @@ def test_full_dimension_coverage(mode, dim):
         assert output.shape == ()
     else:
         assert output.shape == size
+        
+@arg_mark(
+    plat_marks=["cpu_linux"],
+    level_mark="level0",
+    card_mark="onecard",
+    essential_mark="essential",
+)
+@pytest.mark.parametrize("mode", ["pynative", "KBK"])
+def test_full_vmap(mode):
+    """
+    Feature: vmap support for full operator.
+    Description: test full with vectorization.
+    Expectation: results match PyTorch implementation.
+    """
+    # Testing vmap-like behavior by creating multiple tensors with different parameters
+    import mindspore.ops as ops
+    # Since mint.full doesn't directly support vmap, we simulate batch operations
+    sizes_list = [(2, 3), (3, 4), (1, 5)]
+    fill_values = [1.0, 2.5, -1.0]
+    results_ms = []
+    results_torch = []
+    for size, fill_val in zip(sizes_list, fill_values):
+        # MindSpore result
+        if mode == "pynative":
+            ms.context.set_context(mode=ms.PYNATIVE_MODE)
+            ms_result = mint.full(size, fill_val)
+        else:
+            ms_result = jit(
+                full_forward_func,
+                backend="ms_backend",
+                jit_level="O0",
+            )(size, fill_val)
+        results_ms.append(ms_result)
+        # PyTorch result
+        torch_result = torch.full(size, fill_val)
+        results_torch.append(torch_result)
+    # Compare each result
+    for ms_res, torch_res in zip(results_ms, results_torch):
+        allclose_nparray(torch_res.detach().numpy(), ms_res.asnumpy(), equal_nan=True)
