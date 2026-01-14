@@ -54,13 +54,13 @@ def test_fmod_std(mode):
     """
     x = generate_random_input((2, 3, 4), np.float32)
     other = generate_random_input((2, 3, 4), np.float32)
-    expect = generate_expect_forward_output(torch.Tensor(x), torch.Tensor(other))
+    expect = generate_expect_forward_output(torch.tensor(x), torch.tensor(other))
     if mode == 'pynative':
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
-        output = fmod_forward_func(ms.Tensor(x), ms.Tensor(other))
+        output = fmod_forward_func(ms.tensor(x), ms.tensor(other))
     elif mode == 'KBK':
-        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.Tensor(x), ms.Tensor(other))
-    allclose_nparray(expect.detach().numpy().astype(output.asnumpy().dtype), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
+        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.tensor(x), ms.tensor(other))
+    allclose_nparray(expect.detach().numpy(), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0', card_mark='onecard', essential_mark='essential')
@@ -73,13 +73,13 @@ def test_fmod_scalar(mode):
     """
     x = generate_random_input((2, 3, 4), np.float32)
     other = generate_scalar_input()
-    expect = generate_expect_forward_output(torch.Tensor(x), other)
+    expect = generate_expect_forward_output(torch.tensor(x), other)
     if mode == 'pynative':
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
-        output = fmod_forward_func(ms.Tensor(x), other)
+        output = fmod_forward_func(ms.tensor(x), other)
     elif mode == 'KBK':
-        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.Tensor(x), other)
-    allclose_nparray(expect.detach().numpy().astype(output.asnumpy().dtype), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
+        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.tensor(x), other)
+    allclose_nparray(expect.detach().numpy(), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0', card_mark='onecard', essential_mark='essential')
@@ -92,13 +92,13 @@ def test_fmod_broadcast(mode):
     """
     x = generate_random_input((2, 3, 4), np.float32)
     other = generate_random_input((1, 3, 1), np.float32)
-    expect = generate_expect_forward_output(torch.Tensor(x), torch.Tensor(other))
+    expect = generate_expect_forward_output(torch.tensor(x), torch.tensor(other))
     if mode == 'pynative':
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
-        output = fmod_forward_func(ms.Tensor(x), ms.Tensor(other))
+        output = fmod_forward_func(ms.tensor(x), ms.tensor(other))
     elif mode == 'KBK':
-        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.Tensor(x), ms.Tensor(other))
-    allclose_nparray(expect.detach().numpy().astype(output.asnumpy().dtype), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
+        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.tensor(x), ms.tensor(other))
+    allclose_nparray(expect.detach().numpy(), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0', card_mark='onecard', essential_mark='essential')
@@ -112,13 +112,13 @@ def test_fmod_edge_cases(mode):
     # Test with negative values
     x = np.array([-3., -2, -1, 1, 2, 3], dtype=np.float32)
     other = np.array(2., dtype=np.float32)
-    expect = generate_expect_forward_output(torch.Tensor(x), torch.Tensor(other))
+    expect = generate_expect_forward_output(torch.tensor(x), torch.tensor(other))
     if mode == 'pynative':
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
-        output = fmod_forward_func(ms.Tensor(x), ms.Tensor(other))
+        output = fmod_forward_func(ms.tensor(x), ms.tensor(other))
     elif mode == 'KBK':
-        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.Tensor(x), ms.Tensor(other))
-    allclose_nparray(expect.detach().numpy().astype(output.asnumpy().dtype), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
+        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.tensor(x), ms.tensor(other))
+    allclose_nparray(expect.detach().numpy(), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0', card_mark='onecard', essential_mark='essential')
@@ -131,13 +131,13 @@ def test_fmod_different_dtypes(mode):
     """
     x = generate_random_input((2, 3), np.float64)
     other = generate_random_input((2, 3), np.float32)
-    expect = generate_expect_forward_output(torch.Tensor(x), torch.Tensor(other))
+    expect = generate_expect_forward_output(torch.tensor(x), torch.tensor(other))
     if mode == 'pynative':
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
-        output = fmod_forward_func(ms.Tensor(x), ms.Tensor(other))
+        output = fmod_forward_func(ms.tensor(x), ms.tensor(other))
     elif mode == 'KBK':
-        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.Tensor(x), ms.Tensor(other))
-    allclose_nparray(expect.detach().numpy().astype(output.asnumpy().dtype), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
+        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.tensor(x), ms.tensor(other))
+    allclose_nparray(expect.detach().numpy(), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
 
 
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0', card_mark='onecard', essential_mark='essential')
@@ -153,10 +153,10 @@ def test_fmod_integer_tensors(mode):
     expect = generate_expect_forward_output(torch.from_numpy(x), torch.from_numpy(other))
     if mode == 'pynative':
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
-        output = fmod_forward_func(ms.Tensor(x), ms.Tensor(other))
+        output = fmod_forward_func(ms.tensor(x), ms.tensor(other))
     elif mode == 'KBK':
-        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.Tensor(x), ms.Tensor(other))
-    allclose_nparray(expect.detach().numpy().astype(output.asnumpy().dtype), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
+        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.tensor(x), ms.tensor(other))
+    allclose_nparray(expect.detach().numpy(), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
 
 def generate_special_input(shape, dtype, special_type):
     """Generate special input data"""
@@ -200,12 +200,12 @@ def test_fmod_dims(mode, shape):
     """
     x = generate_random_input(shape, np.float32)
     other = generate_random_input(shape, np.float32)
-    expect = generate_expect_forward_output(torch.Tensor(x), torch.Tensor(other))
+    expect = generate_expect_forward_output(torch.tensor(x), torch.tensor(other))
     if mode == 'pynative':
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
-        output = fmod_forward_func(ms.Tensor(x), ms.Tensor(other))
+        output = fmod_forward_func(ms.tensor(x), ms.tensor(other))
     elif mode == 'KBK':
-        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.Tensor(x), ms.Tensor(other))
+        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.tensor(x), ms.tensor(other))
     allclose_nparray(expect.detach().numpy(), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
 
 
@@ -222,12 +222,12 @@ def test_fmod_special_values(mode, special_type):
         pytest.skip("Large values test skipped due to inherent precision differences in fmod implementation with very large numbers")
     x = generate_special_input((2, 3, 4), np.float32, special_type)
     other = generate_random_input((2, 3, 4), np.float32)
-    expect = generate_expect_forward_output(torch.Tensor(x), torch.Tensor(other))
+    expect = generate_expect_forward_output(torch.tensor(x), torch.tensor(other))
     if mode == 'pynative':
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
-        output = fmod_forward_func(ms.Tensor(x), ms.Tensor(other))
+        output = fmod_forward_func(ms.tensor(x), ms.tensor(other))
     elif mode == 'KBK':
-        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.Tensor(x), ms.Tensor(other))
+        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.tensor(x), ms.tensor(other))
     allclose_nparray(expect.detach().numpy(), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
     
 @arg_mark(plat_marks=['cpu_linux'], level_mark='level0', card_mark='onecard', essential_mark='essential')
@@ -242,12 +242,12 @@ def test_fmod_empty_tensor(mode):
     # Test empty tensors
     x = np.array([], dtype=np.float32).reshape(0, 3)
     other = np.array([], dtype=np.float32).reshape(0, 3)
-    expect = generate_expect_forward_output(torch.Tensor(x), torch.Tensor(other))
+    expect = generate_expect_forward_output(torch.tensor(x), torch.tensor(other))
     if mode == 'pynative':
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
-        output = fmod_forward_func(ms.Tensor(x), ms.Tensor(other))
+        output = fmod_forward_func(ms.tensor(x), ms.tensor(other))
     elif mode == 'KBK':
-        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.Tensor(x), ms.Tensor(other))
+        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.tensor(x), ms.tensor(other))
     allclose_nparray(expect.detach().numpy(), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
 
 
@@ -266,12 +266,12 @@ def test_fmod_vmap(mode, batch_size):
         x_batch = generate_random_input((batch_size, 2, 3), np.float32)
         other_batch = generate_random_input((batch_size, 2, 3), np.float32)
         # Expected results using PyTorch
-        torch_x = torch.Tensor(x_batch)
-        torch_other = torch.Tensor(other_batch)
+        torch_x = torch.tensor(x_batch)
+        torch_other = torch.tensor(other_batch)
         expect = generate_expect_forward_output(torch_x, torch_other)
         # Use vmap for batch processing
-        ms_x = ms.Tensor(x_batch)
-        ms_other = ms.Tensor(other_batch)
+        ms_x = ms.tensor(x_batch)
+        ms_other = ms.tensor(other_batch)
         def fmod_batch_func(x, other):
             return mint.fmod(x, other)
         # Apply vmap
@@ -297,9 +297,9 @@ def test_fmod_non_contiguous(mode):
     expect = generate_expect_forward_output(torch.from_numpy(x_non_contig), torch.from_numpy(other_non_contig))
     if mode == 'pynative':
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
-        output = fmod_forward_func(ms.Tensor(x_non_contig), ms.Tensor(other_non_contig))
+        output = fmod_forward_func(ms.tensor(x_non_contig), ms.tensor(other_non_contig))
     elif mode == 'KBK':
-        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.Tensor(x_non_contig), ms.Tensor(other_non_contig))
+        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.tensor(x_non_contig), ms.tensor(other_non_contig))
     allclose_nparray(expect.detach().numpy(), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
 
 
@@ -324,10 +324,10 @@ def test_fmod_various_dtypes(mode, dtype):
         pytest.skip(f"PyTorch fmod doesn't support dtype {dtype}: {e}")
     if mode == 'pynative':
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
-        output = fmod_forward_func(ms.Tensor(x), ms.Tensor(other))
+        output = fmod_forward_func(ms.tensor(x), ms.tensor(other))
     elif mode == 'KBK':
-        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.Tensor(x), ms.Tensor(other))
-    allclose_nparray(expect.detach().numpy().astype(output.asnumpy().dtype), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
+        output = jit(fmod_forward_func, backend="ms_backend", jit_level="O0")(ms.tensor(x), ms.tensor(other))
+    allclose_nparray(expect.detach().numpy(), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
 
 def generate_expect_backward_output(input, other, grad):
     """Generate expected backward propagation results using PyTorch"""
@@ -365,8 +365,8 @@ def test_fmod_backward(mode):
     expect_backward = generate_expect_backward_output(torch_x, torch_other, torch_grad)
     if mode == 'pynative':
         ms.context.set_context(mode=ms.PYNATIVE_MODE)
-        ms_x = ms.Tensor(x)
-        ms_other = ms.Tensor(other)
+        ms_x = ms.tensor(x)
+        ms_other = ms.tensor(other)
         output_forward = fmod_forward_func(ms_x, ms_other)
         output_backward = fmod_backward_func(ms_x, ms_other)
         allclose_nparray(expect_forward.detach().numpy(), output_forward.asnumpy(), rtol=0, atol=0, equal_nan=True)
@@ -391,5 +391,5 @@ def test_fmod_dynamic_shape(mode):
         x_concrete = generate_random_input((2, 3), np.float32)
         other_concrete = generate_random_input((2, 3), np.float32)
         expect = generate_expect_forward_output(torch.tensor(x_concrete), torch.tensor(other_concrete))
-        output = dynamic_fmod(ms.Tensor(x_concrete), ms.Tensor(other_concrete))
+        output = dynamic_fmod(ms.tensor(x_concrete), ms.tensor(other_concrete))
         allclose_nparray(expect.detach().numpy(), output.asnumpy(), rtol=0, atol=0, equal_nan=True)
